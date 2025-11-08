@@ -16,7 +16,7 @@ class ThreadingSingle {
   static DEFAULT_OPTIONS = {
     shape: "circle",
     pegsCount: 250,
-    quality: 1,
+    quality: 3,
     mode: "monochrome",
     invertColors: false,
     nbLines: 1000,
@@ -33,8 +33,6 @@ class ThreadingSingle {
     }
 
     this.sourceImage = sourceImage;
-
-    // Force the simple compositing path so strokes render as solid threads.
     this.parameters = { ...ThreadingSingle.DEFAULT_OPTIONS, ...options };
 
     this.hiddenCanvas = document.createElement("canvas");
