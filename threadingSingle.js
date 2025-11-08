@@ -16,7 +16,7 @@ class ThreadingSingle {
   static DEFAULT_OPTIONS = {
     shape: "circle",
     pegsCount: 250,
-    quality: 3,
+    quality: 4,
     mode: "monochrome",
     invertColors: false,
     nbLines: 1000,
