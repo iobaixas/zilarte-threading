@@ -32,7 +32,6 @@ class ThreadingSingle {
     this.sourceImage = sourceImage;
 
     // Force the simple compositing path so strokes render as solid threads.
-    ThreadingSingle.#advancedCompositingSupported = false;
     this.parameters = { ...ThreadingSingle.DEFAULT_OPTIONS, ...options };
 
     this.hiddenCanvas = document.createElement("canvas");
