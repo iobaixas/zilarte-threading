@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Thread Art Demo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        min-height: 100vh;
+        color: #222;
+      }
+
+      aside {
+        padding: 1.5rem;
+        border-right: 1px solid #ddd;
+        box-sizing: border-box;
+        background: #fafafa;
+      }
+
+      main {
+        display: grid;
+        place-items: center;
+        background: #fff;
+        position: relative;
+      }
+
+      canvas {
+        width: 600px;
+        height: 600px;
+        max-width: 90vmin;
+        max-height: 90vmin;
+        background: #fff;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        border-radius: 12px;
+      }
+
+      fieldset {
+        border: none;
+        margin: 0 0 1rem;
+        padding: 0;
+      }
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+      }
+
+      input[type="range"] {
+        width: 100%;
+      }
+
+      .actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+      }
+
+      button {
+        border: none;
+        background: #2563eb;
+        color: #fff;
+        padding: 0.6rem 1.25rem;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s ease, transform 0.15s ease;
+      }
+
+      button:hover {
+        background: #1d4ed8;
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      .status {
+        margin-top: 1.5rem;
+        font-size: 0.85rem;
+        color: #666;
+        line-height: 1.5;
+      }
+
+      .status strong {
+        color: #111;
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h1>Thread Art Demo</h1>
+      <fieldset>
+        <label>
+          Input image
+          <input id="input-image" type="file" accept="image/*" />
+        </label>
+        <label>
+          Pegs
+          <input id="pegs" type="range" min="80" max="400" step="10" value="250" />
+          <span id="pegs-value">250</span>
+        </label>
+        <label>
+          Lines
+          <input id="lines" type="range" min="100" max="3000" step="100" value="1000" />
+          <span id="lines-value">1000</span>
+        </label>
+        <label>
+          Opacity
+          <input id="opacity" type="range" min="0.02" max="0.3" step="0.01" value="0.0625" />
+          <span id="opacity-value">0.0625</span>
+        </label>
+        <label>
+          Thickness
+          <input id="thickness" type="range" min="0.5" max="4" step="0.1" value="1" />
+          <span id="thickness-value">1</span>
+        </label>
+        <label>
+          Shape
+          <select id="shape">
+            <option value="ellipse" selected>Ellipse</option>
+            <option value="rectangle">Rectangle</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <div class="actions">
+        <button id="generate">Generate</button>
+        <button id="download" type="button">Download Instructions</button>
+      </div>
+
+      <div class="status">
+        <div><strong>Pegs:</strong> <span id="status-pegs">-</span></div>
+        <div><strong>Segments:</strong> <span id="status-segments">-</span></div>
+        <div><strong>Error avg:</strong> <span id="status-error">-</span></div>
+      </div>
+    </aside>
+    <main>
+      <canvas id="result" width="1000" height="1000"></canvas>
+    </main>
+
+    <script type="module">
+      import ThreadingSingle from "./threadingSingle.js";
+
+      const elements = {
+        file: document.getElementById("input-image"),
+        pegs: document.getElementById("pegs"),
+        lines: document.getElementById("lines"),
+        opacity: document.getElementById("opacity"),
+        thickness: document.getElementById("thickness"),
+        shape: document.getElementById("shape"),
+        generate: document.getElementById("generate"),
+        download: document.getElementById("download"),
+        canvas: document.getElementById("result"),
+        statusPegs: document.getElementById("status-pegs"),
+        statusSegments: document.getElementById("status-segments"),
+        statusError: document.getElementById("status-error"),
+        pegsValue: document.getElementById("pegs-value"),
+        linesValue: document.getElementById("lines-value"),
+        opacityValue: document.getElementById("opacity-value"),
+        thicknessValue: document.getElementById("thickness-value"),
+      };
+
+      const ctx = elements.canvas.getContext("2d");
+      let currentImage = null;
+      let currentThreading = null;
+      let rafId = null;
+
+      const plotter = {
+        get size() {
+          return { width: elements.canvas.width, height: elements.canvas.height };
+        },
+        drawBrokenLine(points, color, opacity, operation, thickness) {
+          ThreadingSingle.applyCanvasCompositing(ctx, color, opacity, operation);
+          ctx.lineWidth = thickness;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(points[0].x, points[0].y);
+          for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+          }
+          ctx.stroke();
+          ThreadingSingle.resetCanvasCompositing(ctx);
+        },
+        drawPoints(points, color, radius) {
+          ctx.fillStyle = color;
+          for (const point of points) {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        },
+      };
+
+      elements.file.addEventListener("change", async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          currentImage = img;
+          ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+          ctx.drawImage(img, 0, 0, elements.canvas.width, elements.canvas.height);
+        };
+        img.src = url;
+      });
+
+      function bindRange(range, output) {
+        range.addEventListener("input", () => {
+          output.textContent = range.value;
+        });
+        output.textContent = range.value;
+      }
+
+      bindRange(elements.pegs, elements.pegsValue);
+      bindRange(elements.lines, elements.linesValue);
+      bindRange(elements.opacity, elements.opacityValue);
+      bindRange(elements.thickness, elements.thicknessValue);
+
+      function updateStatus() {
+        if (!currentThreading) {
+          elements.statusPegs.textContent = "-";
+          elements.statusSegments.textContent = "-";
+          elements.statusError.textContent = "-";
+          return;
+        }
+
+        elements.statusPegs.textContent = currentThreading.pegs.length;
+        elements.statusSegments.textContent = currentThreading.nbSegments;
+        elements.statusError.textContent = `${currentThreading.error.average} / ${currentThreading.error.meanSquare}`;
+      }
+
+      function drawLoop() {
+        if (!currentThreading) return;
+
+        const dirty = currentThreading.computeNextSegments(20);
+        if (dirty) {
+          ctx.fillStyle = currentThreading.parameters.invertColors ? "#000" : "#fff";
+          ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+
+          if (currentThreading.parameters.displayPegs) {
+            currentThreading.drawPegs(plotter);
+          }
+
+          currentThreading.drawThread(plotter, 0);
+          updateStatus();
+        }
+
+        rafId = requestAnimationFrame(drawLoop);
+      }
+
+      elements.generate.addEventListener("click", () => {
+        if (!currentImage) {
+          alert("Please select an image first.");
+          return;
+        }
+
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+
+        ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+
+        currentThreading = new ThreadingSingle(currentImage, {
+          shape: elements.shape.value,
+          pegsCount: parseInt(elements.pegs.value, 10),
+          nbLines: parseInt(elements.lines.value, 10),
+          lineOpacity: parseFloat(elements.opacity.value),
+          lineThickness: parseFloat(elements.thickness.value),
+        });
+
+        updateStatus();
+        drawLoop();
+      });
+
+      elements.download.addEventListener("click", () => {
+        if (!currentThreading) {
+          alert("Please generate a thread art first.");
+          return;
+        }
+
+        const blob = new Blob([currentThreading.instructions], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "thread-art-instructions.txt";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+    </script>
+  </body>
+</html>
+
