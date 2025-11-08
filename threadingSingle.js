@@ -166,11 +166,11 @@ class ThreadingSingle {
 
   get instructions() {
     if (this.parameters.mode !== "monochrome") {
-      return "Instructions are only available for monochrome mode.";
+      return "Las instrucciones solo estan disponibles para el modo monocromatico.";
     }
 
     if (this.parameters.invertColors) {
-      return "Instructions are only available for black thread.";
+      return "Las instrucciones solo estan disponibles para hilo negro.";
     }
 
     let maxX = -Infinity;
@@ -182,17 +182,17 @@ class ThreadingSingle {
     }
 
     const lines = [];
-    ines.push("Space units below are abstract — scale them to your needs (e.g. 1 unit = 1 mm).");
-    lines.push(`Computed for a total size of ${maxX} x ${maxY}.`);
+    lines.push("Las unidades de espacio son abstractas - ajustalas a tus necesidades (por ejemplo 1 unidad = 1 mm).");
+    lines.push(`Calculado para un tamano total de ${maxX} x ${maxY}.`);
 
     const threadWidth = this.parameters.lineThickness * this.hiddenCanvasScale;
     lines.push(
-      `Computed for a black thread of width ${threadWidth} and opacity ${this.parameters.lineOpacity} (equivalent opaque width ${
+      `Calculado para un hilo negro de grosor ${threadWidth} y opacidad ${this.parameters.lineOpacity} (ancho opaco equivalente ${
         threadWidth * this.parameters.lineOpacity
       }).`
     );
     lines.push("");
-    lines.push("Peg positions:");
+    lines.push("Posiciones de los clavos:");
 
     this.pegs.forEach((peg, index) => {
       peg.name = `PEG_${index}`;
@@ -200,14 +200,14 @@ class ThreadingSingle {
     });
 
     lines.push("");
-    lines.push("Thread steps:");
+    lines.push("Pasos del hilo:");
 
     this.thread.iterateOnThreads(0, (threadPoints) => {
       const sequence = threadPoints;
-      lines.push(`  - Start from ${sequence[0].name}`);
+      lines.push(`  - Comienza desde ${sequence[0].name}`);
 
       for (let i = 1; i < sequence.length; i++) {
-        lines.push(`  - then go to ${sequence[i].name} (segment ${i} / ${sequence.length - 1})`);
+        lines.push(`  - luego ve a ${sequence[i].name} (segmento ${i} / ${sequence.length - 1})`);
       }
     });
 

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>Thread Art Demo</title>
+    <title>Zilarte</title>
     <style>
       body {
         margin: 0;
@@ -98,26 +98,26 @@
     <aside>
       <fieldset>
         <label>
-          Input image
+          Imagen de entrada
           <input id="input-image" type="file" accept="image/*" />
         </label>
         <label>
-          Pegs
+          Clavos
           <input id="pegs" type="range" min="80" max="400" step="10" value="300" />
           <span id="pegs-value">300</span>
         </label>
         <label>
-          Lines
+          Lineas
           <input id="lines" type="range" min="100" max="10000" step="100" value="2000" />
           <span id="lines-value">2000</span>
         </label>
         <label>
-          Opacity
+          Opacidad
           <input id="opacity" type="range" min="0.5" max="1.0" step="0.05" value="0.75" />
           <span id="opacity-value">0.75</span>
         </label>
         <label>
-          Thickness
+          Grosor
           <input id="thickness" type="range" min="0.01" max="0.1" step="0.01" value="0.01" />
           <span id="thickness-value">0.01</span>
         </label>
@@ -127,33 +127,33 @@
           <span id="zoom-value">1</span>
         </label>
         <label>
-          Offset X
+          Desplazamiento X
           <input id="zoom-offset-x" type="range" min="-1" max="1" step="0.1" value="0" />
           <span id="zoom-offset-x-value">0</span>
         </label>
         <label>
-          Offset Y
+          Desplazamiento Y
           <input id="zoom-offset-y" type="range" min="-1" max="1" step="0.1" value="0" />
           <span id="zoom-offset-y-value">0</span>
         </label>
         <label>
-          Shape
+          Forma
           <select id="shape">
-            <option value="circle" selected>Circle</option>
-            <option value="rectangle">Rectangle</option>
+            <option value="circle" selected>Circulo</option>
+            <option value="rectangle">Rectangulo</option>
           </select>
         </label>
       </fieldset>
 
       <div class="actions">
-        <button id="generate">Generate</button>
-        <button id="download" type="button">Download Instructions</button>
+        <button id="generate">Generar</button>
+        <button id="download" type="button">Descargar instrucciones</button>
       </div>
 
       <div class="status">
-        <div><strong>Pegs:</strong> <span id="status-pegs">-</span></div>
-        <div><strong>Segments:</strong> <span id="status-segments">-</span></div>
-        <div><strong>Error avg:</strong> <span id="status-error">-</span></div>
+        <div><strong>Clavos:</strong> <span id="status-pegs">-</span></div>
+        <div><strong>Segmentos:</strong> <span id="status-segments">-</span></div>
+        <div><strong>Error promedio:</strong> <span id="status-error">-</span></div>
       </div>
     </aside>
     <main>
@@ -281,7 +281,7 @@
 
       elements.generate.addEventListener("click", () => {
         if (!currentImage) {
-          alert("Please select an image first.");
+          alert("Selecciona una imagen primero.");
           return;
         }
 
@@ -309,7 +309,7 @@
 
       elements.download.addEventListener("click", () => {
         if (!currentThreading) {
-          alert("Please generate a thread art first.");
+          alert("Genera un arte de hilos primero.");
           return;
         }
 
@@ -317,7 +317,7 @@
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "thread-art-instructions.txt";
+        link.download = "instrucciones-arte-hilos.txt";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
