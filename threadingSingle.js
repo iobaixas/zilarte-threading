@@ -795,9 +795,4 @@ ThreadingSingle.Transformation = class {
   }
 };
 
-if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
-  module.exports = ThreadingSingle;
-} else if (typeof window !== "undefined") {
-  window.ThreadingSingle = ThreadingSingle;
-}
-
+window.ThreadingSingle = ThreadingSingle;
