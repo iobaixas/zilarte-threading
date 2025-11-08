@@ -467,27 +467,18 @@ class ThreadingSingle {
         return Math.min(delta, ThreadingSingle.TWO_PI - delta) <= ThreadingSingle.MIN_SEGMENT_DISTANCE;
       };
 
-      const radiusX = 0.5 * targetSize.width;
-      const radiusY = 0.5 * targetSize.height;
-      const ellipsePerimeterApprox =
-        Math.PI * (3 * (radiusX + radiusY) - Math.sqrt((3 * radiusX + radiusY) * (radiusX + 3 * radiusY)));
-      const arcLength = ellipsePerimeterApprox / this.parameters.pegsCount;
+      const radius = 0.5 * Math.min(targetSize.width, targetSize.height);
+      const centerX = 0.5 * targetSize.width;
+      const centerY = 0.5 * targetSize.height;
+      const angleStep = ThreadingSingle.TWO_PI / this.parameters.pegsCount;
 
-      let angle = 0;
-
-      while (pegs.length < this.parameters.pegsCount) {
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        const peg = {
-          x: radiusX * (1 + cos),
-          y: radiusY * (1 + sin),
+      for (let i = 0; i < this.parameters.pegsCount; i++) {
+        const angle = i * angleStep;
+        pegs.push({
+          x: centerX + radius * Math.cos(angle),
+          y: centerY + radius * Math.sin(angle),
           angle,
-        };
-
-        pegs.push(peg);
-
-        const increment = arcLength / Math.sqrt(radiusX * radiusX * sin * sin + radiusY * radiusY * cos * cos);
-        angle += increment;
+        });
       }
     }
 
