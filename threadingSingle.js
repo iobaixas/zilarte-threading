@@ -163,49 +163,16 @@ class ThreadingSingle {
   }
 
   get instructions() {
-    if (this.parameters.mode !== "monochrome") {
-      return "Las instrucciones solo estan disponibles para el modo monocromatico.";
-    }
-
-    if (this.parameters.invertColors) {
-      return "Las instrucciones solo estan disponibles para hilo negro.";
-    }
-
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const peg of this.pegs) {
-      maxX = Math.max(maxX, peg.x);
-      maxY = Math.max(maxY, peg.y);
-    }
-
     const lines = [];
-    lines.push("Las unidades de espacio son abstractas - ajustalas a tus necesidades (por ejemplo 1 unidad = 1 mm).");
-    lines.push(`Calculado para un tamano total de ${maxX} x ${maxY}.`);
-
-    const threadWidth = this.parameters.lineThickness * this.hiddenCanvasScale;
-    lines.push(
-      `Calculado para un hilo negro de grosor ${threadWidth} y opacidad ${this.parameters.lineOpacity} (ancho opaco equivalente ${
-        threadWidth * this.parameters.lineOpacity
-      }).`
-    );
-    lines.push("");
-    lines.push("Posiciones de los clavos:");
 
     this.pegs.forEach((peg, index) => {
-      peg.name = `PEG_${index}`;
-      lines.push(`  - ${peg.name}: x=${peg.x.toFixed(2)} ; y=${peg.y.toFixed(2)}`);
+      peg.name = `${index + 1}`;
     });
-
-    lines.push("");
-    lines.push("Pasos del hilo:");
 
     this.thread.iterateOnThreads(0, (threadPoints) => {
       const sequence = threadPoints;
-      lines.push(`  - Comienza desde ${sequence[0].name}`);
-
-      for (let i = 1; i < sequence.length; i++) {
-        lines.push(`  - luego ve a ${sequence[i].name} (segmento ${i} / ${sequence.length - 1})`);
+      for (let i = 0; i < sequence.length; i++) {
+        lines.push(`${sequence[i].name}`);
       }
     });
 
