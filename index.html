@@ -66,6 +66,7 @@
 
       .preview-media img {
         background: #f9fafb;
+        object-fit: contain;
       }
 
       .preview-media canvas.is-hidden {
@@ -137,6 +138,46 @@
       .product-dependent.show {
         display: flex;
       }
+
+      /* Crop overlay */
+      .crop-overlay {
+        position: absolute;
+        box-sizing: border-box;
+        border: 2px solid #ffffff;
+        outline: 9999px solid rgba(0, 0, 0, 0.4); /* dim outside area */
+        cursor: move;
+        display: none; /* shown in original view only */
+        touch-action: none;
+      }
+
+      .crop-handle {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        background: #ffffff;
+        border: 1px solid #111827;
+        border-radius: 3px;
+        z-index: 2;
+        touch-action: none;
+      }
+
+      /* Inscribed circle inside the crop square */
+      .crop-circle {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 2px solid #ffffff;
+        z-index: 1;
+        /* Improve visibility on any background */
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+        mix-blend-mode: difference;
+        pointer-events: none; /* keep handles and drag functional */
+      }
+
+      .crop-handle.nw { top: -8px; left: -8px; cursor: nwse-resize; }
+      .crop-handle.ne { top: -8px; right: -8px; cursor: nesw-resize; }
+      .crop-handle.sw { bottom: -8px; left: -8px; cursor: nesw-resize; }
+      .crop-handle.se { bottom: -8px; right: -8px; cursor: nwse-resize; }
 
       aside {
         width: 100%;
@@ -235,6 +276,13 @@
             alt="Vista previa de la imagen seleccionada"
             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='24'%3ESin imagen%3C/text%3E%3C/svg%3E"
           />
+          <div id="crop-overlay" class="crop-overlay">
+            <div class="crop-circle"></div>
+            <div class="crop-handle nw" data-corner="nw"></div>
+            <div class="crop-handle ne" data-corner="ne"></div>
+            <div class="crop-handle sw" data-corner="sw"></div>
+            <div class="crop-handle se" data-corner="se"></div>
+          </div>
           <canvas id="result" width="1000" height="1000" class="is-hidden"></canvas>
           <div id="placeholder-content" class="placeholder-content">
             <button id="placeholder-upload" class="upload-button" type="button">Subir imagen</button>
@@ -311,6 +359,7 @@
         placeholderUpload: document.getElementById("placeholder-upload"),
         backButton: document.getElementById("back-button"),
         previewHeading: document.getElementById("preview-heading"),
+        cropOverlay: document.getElementById("crop-overlay"),
         canvas: document.getElementById("result"),
         statusPegs: document.getElementById("status-pegs"),
         statusSegments: document.getElementById("status-segments"),
@@ -392,6 +441,7 @@
         elements.canvas.classList.add("is-hidden");
         elements.placeholderContent.classList.toggle("is-hidden", Boolean(currentImage));
         elements.backButton.classList.add("is-hidden");
+        elements.cropOverlay.style.display = currentImage ? "block" : "none";
       }
 
       function showResultView() {
@@ -400,6 +450,7 @@
         elements.canvas.classList.remove("is-hidden");
         elements.placeholderContent.classList.add("is-hidden");
         elements.backButton.classList.remove("is-hidden");
+        elements.cropOverlay.style.display = "none";
       }
 
       showOriginalView();
@@ -454,6 +505,9 @@
           // Enable generate, keep download disabled until we have a result
           elements.generate.disabled = false;
           elements.download.disabled = true;
+          // Initialize crop overlay
+          initializeCropSelection();
+          updateCropOverlay();
         };
         img.src = url;
       }
@@ -548,13 +602,44 @@
 
 
         showResultView();
+
+        // Compute zoom and offsets from normalized crop selection
+        const crop = currentCropSelection; // {x,y,size} normalized within displayed image box
+        const box = getDisplayedImageBox();
+        const sw = crop.size; // normalized width relative to displayed image
+        const cx = crop.x + crop.size / 2;
+        const cy = crop.y + crop.size / 2;
+
+        // Map to source image
+        const srcW = currentImage.naturalWidth;
+        const srcH = currentImage.naturalHeight;
+        const displayedW = box.width;
+        const displayedH = box.height;
+        const scale = Math.min(displayedW / srcW, displayedH / srcH);
+        const cropWidthSrc = Math.round((sw * displayedW) / scale);
+        const cropHeightSrc = cropWidthSrc; // square
+        const desiredSourceX = Math.round(cx * srcW - cropWidthSrc / 2);
+        const desiredSourceY = Math.round(cy * srcH - cropHeightSrc / 2);
+
+        const centerOffsetX = Math.round(0.5 * (srcW - cropWidthSrc));
+        const centerOffsetY = Math.round(0.5 * (srcH - cropHeightSrc));
+        const maxOffsetX = centerOffsetX;
+        const maxOffsetY = centerOffsetY;
+
+        const clampedSourceX = Math.max(0, Math.min(srcW - cropWidthSrc, desiredSourceX));
+        const clampedSourceY = Math.max(0, Math.min(srcH - cropHeightSrc, desiredSourceY));
+
+        const offsetX = maxOffsetX ? (clampedSourceX - centerOffsetX) / maxOffsetX : 0;
+        const offsetY = maxOffsetY ? (clampedSourceY - centerOffsetY) / maxOffsetY : 0;
+        const zoom = srcW / cropWidthSrc; // equals 1/sw if image fully visible; this is robust
+
         currentThreading = new ThreadingSingle(currentImage, {
           pegsCount: parseInt(elements.pegs.value, 10),
           nbLines: parseInt(elements.lines.value, 10),
           lineThickness: parseFloat(elements.thickness.value),
-          zoom: parseFloat(elements.zoom.value),
-          zoomOffsetX: parseFloat(elements.zoomOffsetX.value),
-          zoomOffsetY: parseFloat(elements.zoomOffsetY.value),
+          zoom,
+          zoomOffsetX: offsetX,
+          zoomOffsetY: offsetY,
         });
 
         // Enable download now that we have a result context
@@ -578,6 +663,146 @@
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+      });
+
+      // ---------- Crop overlay logic ----------
+      let currentCropSelection = { x: 0.25, y: 0.25, size: 0.5 }; // normalized within displayed image box
+      let dragState = null; // {type: 'move'|'resize', corner?, startX, startY, startSel}
+
+      function getDisplayedImageBox() {
+        const container = elements.previewImage.parentElement; // .preview-media
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        const iw = currentImage ? currentImage.naturalWidth : 1;
+        const ih = currentImage ? currentImage.naturalHeight : 1;
+        const scale = Math.min(cw / iw, ch / ih);
+        const w = iw * scale;
+        const h = ih * scale;
+        const left = (cw - w) / 2;
+        const top = (ch - h) / 2;
+        return { left, top, width: w, height: h };
+      }
+
+      function clamp(val, min, max) {
+        return Math.max(min, Math.min(max, val));
+      }
+
+      function updateCropOverlay() {
+        const box = getDisplayedImageBox();
+        const x = box.left + currentCropSelection.x * box.width;
+        const y = box.top + currentCropSelection.y * box.height;
+        const sizePx = currentCropSelection.size * box.width;
+
+        const el = elements.cropOverlay;
+        el.style.display = currentImage ? "block" : "none";
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.style.width = `${sizePx}px`;
+        el.style.height = `${sizePx}px`;
+      }
+
+      function startDrag(e, type, corner) {
+        e.preventDefault();
+        const rect = elements.previewImage.parentElement.getBoundingClientRect();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        dragState = {
+          type,
+          corner,
+          startX,
+          startY,
+          rect,
+          startSel: { ...currentCropSelection },
+        };
+        window.addEventListener("pointermove", onDragMove);
+        window.addEventListener("pointerup", endDrag, { once: true });
+      }
+
+      function onDragMove(e) {
+        if (!dragState) return;
+        const box = getDisplayedImageBox();
+        const dx = (e.clientX - dragState.startX) / box.width;
+        const dy = (e.clientY - dragState.startY) / box.height;
+        let { x, y, size } = dragState.startSel;
+
+        if (dragState.type === "move") {
+          x = clamp(x + dx, 0, 1 - size);
+          y = clamp(y + dy, 0, 1 - size);
+        } else if (dragState.type === "resize") {
+          const x0 = dragState.startSel.x;
+          const y0 = dragState.startSel.y;
+          const s0 = dragState.startSel.size;
+
+          if (dragState.corner === "nw") {
+            // Anchor at bottom-right (x0+s0, y0+s0)
+            const ax = x0 + s0;
+            const ay = y0 + s0;
+            const newX = clamp(x0 + dx, 0, ax); // normalized
+            const newY = clamp(y0 + dy, 0, ay);
+            let s = Math.min(ax - newX, ay - newY);
+            s = clamp(s, 0.05, 1.0);
+            x = clamp(ax - s, 0, 1 - s);
+            y = clamp(ay - s, 0, 1 - s);
+            size = s;
+          } else if (dragState.corner === "ne") {
+            // Anchor at bottom-left (x0, y0+s0)
+            const ax = x0;
+            const ay = y0 + s0;
+            const mx = clamp(x0 + s0 + dx, ax, 1);
+            const my = clamp(y0 + dy, 0, ay);
+            let s = Math.min(mx - ax, ay - my);
+            s = clamp(s, 0.05, 1.0);
+            x = clamp(ax, 0, 1 - s);
+            y = clamp(ay - s, 0, 1 - s);
+            size = s;
+          } else if (dragState.corner === "sw") {
+            // Anchor at top-right (x0+s0, y0)
+            const ax = x0 + s0;
+            const ay = y0;
+            const mx = clamp(x0 + dx, 0, ax);
+            const my = clamp(y0 + s0 + dy, ay, 1);
+            let s = Math.min(ax - mx, my - ay);
+            s = clamp(s, 0.05, 1.0);
+            x = clamp(ax - s, 0, 1 - s);
+            y = clamp(ay, 0, 1 - s);
+            size = s;
+          } else if (dragState.corner === "se") {
+            // Anchor at top-left (x0, y0)
+            const ax = x0;
+            const ay = y0;
+            const mx = clamp(x0 + s0 + dx, ax, 1);
+            const my = clamp(y0 + s0 + dy, ay, 1);
+            let s = Math.min(mx - ax, my - ay);
+            s = clamp(s, 0.05, 1.0);
+            x = clamp(ax, 0, 1 - s);
+            y = clamp(ay, 0, 1 - s);
+            size = s;
+          }
+        }
+
+        currentCropSelection = { x, y, size };
+        updateCropOverlay();
+      }
+
+      function endDrag() {
+        window.removeEventListener("pointermove", onDragMove);
+        dragState = null;
+      }
+
+      function initializeCropSelection() {
+        currentCropSelection = { x: 0.25, y: 0.25, size: 0.5 };
+        const overlay = elements.cropOverlay;
+        overlay.onpointerdown = (e) => startDrag(e, "move");
+        overlay.querySelectorAll(".crop-handle").forEach((h) => {
+          h.onpointerdown = (e) => {
+            e.stopPropagation(); // prevent overlay move handler
+            startDrag(e, "resize", h.getAttribute("data-corner"));
+          };
+        });
+      }
+
+      window.addEventListener("resize", () => {
+        if (currentImage) updateCropOverlay();
       });
     </script>
   </body>
