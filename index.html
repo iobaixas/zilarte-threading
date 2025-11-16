@@ -44,21 +44,86 @@
         color: #111;
       }
 
-      canvas,
-      .preview-panel img {
+      .preview-media {
+        position: relative;
         width: 100%;
         border-radius: 12px;
         background: #fff;
         box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
-      }
-
-      canvas {
+        overflow: hidden;
         aspect-ratio: 1 / 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
-      .preview-panel img {
+      .preview-media img,
+      .preview-media canvas {
+        width: 100%;
+        height: 100%;
         object-fit: cover;
-        min-height: 200px;
+      }
+
+      .preview-media img {
+        background: #f9fafb;
+      }
+
+      .preview-media canvas.is-hidden {
+        display: none !important;
+      }
+
+      .placeholder-content {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        color: #6b7280;
+        text-align: center;
+        padding: 1.5rem;
+      }
+
+      .upload-button {
+        border: none;
+        background: #2563eb;
+        color: #fff;
+        padding: 0.85rem 1.5rem;
+        border-radius: 999px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.95rem;
+        box-shadow: 0 12px 25px rgba(37, 99, 235, 0.25);
+      }
+
+      .upload-button:hover {
+        background: #1d4ed8;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        border: none;
+        background: rgba(15, 23, 42, 0.65);
+        color: #fff;
+        border-radius: 999px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        backdrop-filter: blur(4px);
+        transition: opacity 0.15s ease;
+      }
+
+      .back-button:hover {
+        opacity: 0.9;
       }
 
       .is-hidden {
@@ -136,20 +201,24 @@
     <main>
       <article class="preview-panel">
         <h2 id="preview-heading">Imagen original</h2>
-        <img
-          id="preview-image"
-          alt="Vista previa de la imagen seleccionada"
-          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='24'%3ESin imagen%3C/text%3E%3C/svg%3E"
-        />
-        <canvas id="result" width="1000" height="1000" class="is-hidden"></canvas>
+        <div class="preview-media">
+          <button id="back-button" class="back-button is-hidden" aria-label="Volver a seleccionar imagen">
+            ←
+          </button>
+          <img
+            id="preview-image"
+            alt="Vista previa de la imagen seleccionada"
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='24'%3ESin imagen%3C/text%3E%3C/svg%3E"
+          />
+          <canvas id="result" width="1000" height="1000" class="is-hidden"></canvas>
+          <div id="placeholder-content" class="placeholder-content">
+            <button id="placeholder-upload" class="upload-button" type="button">Subir imagen</button>
+          </div>
+        </div>
       </article>
     </main>
     <aside>
       <fieldset>
-        <label>
-          Imagen de entrada
-          <input id="input-image" type="file" accept="image/*" />
-        </label>
         <label>
           Clavos
           <input id="pegs" type="range" min="80" max="400" step="10" value="300" />
@@ -209,7 +278,6 @@
     <script src="./threadingSingle.js"></script>
     <script type="text/javascript">
       const elements = {
-        file: document.getElementById("input-image"),
         pegs: document.getElementById("pegs"),
         lines: document.getElementById("lines"),
         opacity: document.getElementById("opacity"),
@@ -221,6 +289,9 @@
         generate: document.getElementById("generate"),
         download: document.getElementById("download"),
         previewImage: document.getElementById("preview-image"),
+        placeholderContent: document.getElementById("placeholder-content"),
+        placeholderUpload: document.getElementById("placeholder-upload"),
+        backButton: document.getElementById("back-button"),
         previewHeading: document.getElementById("preview-heading"),
         canvas: document.getElementById("result"),
         statusPegs: document.getElementById("status-pegs"),
@@ -245,12 +316,16 @@
         elements.previewHeading.textContent = "Imagen original";
         elements.previewImage.classList.remove("is-hidden");
         elements.canvas.classList.add("is-hidden");
+        elements.placeholderContent.classList.toggle("is-hidden", Boolean(currentImage));
+        elements.backButton.classList.add("is-hidden");
       }
 
       function showResultView() {
         elements.previewHeading.textContent = "Resultado con hilos";
         elements.previewImage.classList.add("is-hidden");
         elements.canvas.classList.remove("is-hidden");
+        elements.placeholderContent.classList.add("is-hidden");
+        elements.backButton.classList.remove("is-hidden");
       }
 
       showOriginalView();
@@ -283,8 +358,7 @@
         },
       };
 
-      elements.file.addEventListener("change", async (event) => {
-        const file = event.target.files[0];
+      function handleImageSelection(file) {
         if (!file) return;
 
         if (previewObjectUrl) {
@@ -301,8 +375,38 @@
           ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
           ctx.drawImage(img, 0, 0, elements.canvas.width, elements.canvas.height);
           showOriginalView();
+          elements.placeholderContent.classList.add("is-hidden");
+          elements.backButton.classList.remove("is-hidden");
         };
         img.src = url;
+      }
+
+      elements.placeholderUpload.addEventListener("click", () => {
+        const tempInput = document.createElement("input");
+        tempInput.type = "file";
+        tempInput.accept = "image/*";
+        tempInput.style.display = "none";
+        document.body.appendChild(tempInput);
+        tempInput.addEventListener("change", (event) => {
+          const file = event.target.files[0];
+          handleImageSelection(file);
+          document.body.removeChild(tempInput);
+        });
+        tempInput.click();
+      });
+
+      elements.backButton.addEventListener("click", () => {
+        currentImage = null;
+        if (previewObjectUrl) {
+          URL.revokeObjectURL(previewObjectUrl);
+          previewObjectUrl = null;
+        }
+        elements.previewImage.src =
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='24'%3ESin imagen%3C/text%3E%3C/svg%3E";
+        ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+        showOriginalView();
+        elements.placeholderContent.classList.remove("is-hidden");
+        elements.backButton.classList.add("is-hidden");
       });
 
       function bindRange(range, output) {
@@ -363,7 +467,6 @@
           rafId = null;
         }
 
-        ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
 
         showResultView();
         currentThreading = new ThreadingSingle(currentImage, {
