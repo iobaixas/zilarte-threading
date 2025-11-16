@@ -130,6 +130,14 @@
         display: none !important;
       }
 
+      .product-dependent {
+        display: none;
+      }
+
+      .product-dependent.show {
+        display: flex;
+      }
+
       aside {
         width: 100%;
         max-width: 900px;
@@ -185,6 +193,23 @@
         transform: translateY(1px);
       }
 
+      /* Disabled buttons - ensure visual state overrides */
+      button[disabled],
+      button:disabled {
+        background: #9ca3af !important; /* gray */
+        color: #fff;
+        cursor: not-allowed;
+        opacity: 0.7;
+        box-shadow: none;
+        pointer-events: none;
+        transform: none;
+      }
+
+      button[disabled]:hover,
+      button:disabled:hover {
+        background: #9ca3af !important;
+      }
+
       .status {
         margin-top: 1.5rem;
         font-size: 0.85rem;
@@ -220,6 +245,10 @@
     <aside>
       <fieldset>
         <label>
+          Producto
+          <select id="product"></select>
+        </label>
+        <label id="pegs-label" class="product-dependent">
           Clavos
           <input id="pegs" type="range" min="80" max="400" step="10" value="300" />
           <span id="pegs-value">300</span>
@@ -229,12 +258,7 @@
           <input id="lines" type="range" min="1000" max="4000" step="100" value="3000" />
           <span id="lines-value">3000</span>
         </label>
-        <label>
-          Opacidad
-          <input id="opacity" type="range" min="0.01" max="1.0" step="0.01" value="1.0" />
-          <span id="opacity-value">1.0</span>
-        </label>
-        <label>
+        <label id="thickness-label" class="product-dependent">
           Grosor
           <input id="thickness" type="range" min="0.01" max="0.1" step="0.001" value="0.02" />
           <span id="thickness-value">0.25</span>
@@ -254,18 +278,11 @@
           <input id="zoom-offset-y" type="range" min="-1" max="1" step="0.01" value="0" />
           <span id="zoom-offset-y-value">0</span>
         </label>
-        <label>
-          Forma
-          <select id="shape">
-            <option value="circle" selected>Circulo</option>
-            <option value="rectangle">Rectangulo</option>
-          </select>
-        </label>
       </fieldset>
 
       <div class="actions">
-        <button id="generate">Generar</button>
-        <button id="download" type="button">Descargar instrucciones</button>
+        <button id="generate" disabled>Generar</button>
+        <button id="download" type="button" disabled>Descargar instrucciones</button>
       </div>
 
       <div class="status">
@@ -277,15 +294,21 @@
 
     <script src="./threadingSingle.js"></script>
     <script type="text/javascript">
+      const PRODUCTS = [
+        { name: "Pequeño (15cm)", pegs: 150, thickness: 0.02, lines: 1500 },
+        { name: "Mediano (20cm)", pegs: 200, thickness: 0.02, lines: 2000 },
+        { name: "Grande (25cm)", pegs: 250, thickness: 0.025, lines: 2500 },
+        { name: "Extra Grande (30cm)", pegs: 300, thickness: 0.03, lines: 3000 },
+      ];
+
       const elements = {
+        product: document.getElementById("product"),
         pegs: document.getElementById("pegs"),
         lines: document.getElementById("lines"),
-        opacity: document.getElementById("opacity"),
         thickness: document.getElementById("thickness"),
         zoom: document.getElementById("zoom"),
         zoomOffsetX: document.getElementById("zoom-offset-x"),
         zoomOffsetY: document.getElementById("zoom-offset-y"),
-        shape: document.getElementById("shape"),
         generate: document.getElementById("generate"),
         download: document.getElementById("download"),
         previewImage: document.getElementById("preview-image"),
@@ -299,12 +322,54 @@
         statusError: document.getElementById("status-error"),
         pegsValue: document.getElementById("pegs-value"),
         linesValue: document.getElementById("lines-value"),
-        opacityValue: document.getElementById("opacity-value"),
         thicknessValue: document.getElementById("thickness-value"),
         zoomValue: document.getElementById("zoom-value"),
         zoomOffsetXValue: document.getElementById("zoom-offset-x-value"),
         zoomOffsetYValue: document.getElementById("zoom-offset-y-value"),
+        pegsLabel: document.getElementById("pegs-label"),
+        thicknessLabel: document.getElementById("thickness-label"),
       };
+
+      // Disable actions until an image is selected
+      elements.generate.disabled = true;
+      elements.download.disabled = true;
+
+      // Populate product dropdown
+      PRODUCTS.forEach((product, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = product.name;
+        elements.product.appendChild(option);
+      });
+
+      // Handle product selection (force product values; keep pegs/thickness hidden)
+      elements.product.addEventListener("change", (event) => {
+        const selectedIndex = parseInt(event.target.value, 10);
+        const selectedProduct = PRODUCTS[selectedIndex];
+        if (!selectedProduct) return;
+
+        elements.pegsLabel.classList.remove("show");
+        elements.thicknessLabel.classList.remove("show");
+
+        elements.pegs.value = selectedProduct.pegs;
+        elements.pegsValue.textContent = selectedProduct.pegs;
+        elements.thickness.value = selectedProduct.thickness;
+        elements.thicknessValue.textContent = selectedProduct.thickness;
+        elements.lines.value = selectedProduct.lines;
+        elements.linesValue.textContent = selectedProduct.lines;
+      });
+
+      // Initialize: preselect first product and apply values; keep pegs/thickness hidden
+      if (PRODUCTS.length > 0) {
+        elements.product.value = "0";
+        const first = PRODUCTS[0];
+        elements.pegs.value = first.pegs;
+        elements.pegsValue.textContent = first.pegs;
+        elements.thickness.value = first.thickness;
+        elements.thicknessValue.textContent = first.thickness;
+        elements.lines.value = first.lines;
+        elements.linesValue.textContent = first.lines;
+      }
 
       const ctx = elements.canvas.getContext("2d");
       let currentImage = null;
@@ -377,6 +442,9 @@
           showOriginalView();
           elements.placeholderContent.classList.add("is-hidden");
           elements.backButton.classList.remove("is-hidden");
+          // Enable generate, keep download disabled until we have a result
+          elements.generate.disabled = false;
+          elements.download.disabled = true;
         };
         img.src = url;
       }
@@ -407,6 +475,9 @@
         showOriginalView();
         elements.placeholderContent.classList.remove("is-hidden");
         elements.backButton.classList.add("is-hidden");
+        // Disable actions again
+        elements.generate.disabled = true;
+        elements.download.disabled = true;
       });
 
       function bindRange(range, output) {
@@ -418,7 +489,6 @@
 
       bindRange(elements.pegs, elements.pegsValue);
       bindRange(elements.lines, elements.linesValue);
-      bindRange(elements.opacity, elements.opacityValue);
       bindRange(elements.thickness, elements.thicknessValue);
       bindRange(elements.zoom, elements.zoomValue);
       bindRange(elements.zoomOffsetX, elements.zoomOffsetXValue);
@@ -470,16 +540,16 @@
 
         showResultView();
         currentThreading = new ThreadingSingle(currentImage, {
-          shape: elements.shape.value,
           pegsCount: parseInt(elements.pegs.value, 10),
           nbLines: parseInt(elements.lines.value, 10),
-          lineOpacity: parseFloat(elements.opacity.value),
           lineThickness: parseFloat(elements.thickness.value),
           zoom: parseFloat(elements.zoom.value),
           zoomOffsetX: parseFloat(elements.zoomOffsetX.value),
           zoomOffsetY: parseFloat(elements.zoomOffsetY.value),
         });
 
+        // Enable download now that we have a result context
+        elements.download.disabled = false;
         updateStatus();
         drawLoop();
       });

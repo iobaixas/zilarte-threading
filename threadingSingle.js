@@ -20,7 +20,7 @@ class ThreadingSingle {
     mode: "monochrome",
     invertColors: false,
     nbLines: 1000,
-    lineOpacity: 1 / 16,
+    lineOpacity: 1.0,
     lineThickness: 1,
     zoom: 1,
     zoomOffsetX: 0,
