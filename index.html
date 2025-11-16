@@ -790,7 +790,12 @@
       }
 
       function initializeCropSelection() {
-        currentCropSelection = { x: 0.25, y: 0.25, size: 0.5 };
+        // Make the square as large as possible without overflowing the displayed image
+        const box = getDisplayedImageBox();
+        const size = Math.min(1, box.height / box.width); // normalized to displayed width
+        const x = 0.5 - size / 2;
+        const y = 0.5 - (size * (box.width / box.height)) / 2; // normalized to displayed height
+        currentCropSelection = { x: Math.max(0, x), y: Math.max(0, y), size };
         const overlay = elements.cropOverlay;
         overlay.onpointerdown = (e) => startDrag(e, "move");
         overlay.querySelectorAll(".crop-handle").forEach((h) => {
@@ -799,6 +804,7 @@
             startDrag(e, "resize", h.getAttribute("data-corner"));
           };
         });
+        updateCropOverlay();
       }
 
       window.addEventListener("resize", () => {
