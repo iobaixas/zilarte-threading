@@ -322,38 +322,39 @@
     </style>
   </head>
     <body>
-    <main>
-      <article class="preview-panel">
-        <h2 id="preview-heading">Imagen original</h2>
-        <div class="preview-media">
-          <button id="back-button" class="back-button is-hidden" aria-label="Volver a seleccionar imagen">
-            ←
-          </button>
-          <img
-            id="preview-image"
-            alt="Vista previa de la imagen seleccionada"
-            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='24'%3ESin imagen%3C/text%3E%3C/svg%3E"
-          />
-          <div id="crop-overlay" class="crop-overlay">
-            <div class="crop-circle"></div>
-            <div class="crop-handle nw" data-corner="nw"></div>
-            <div class="crop-handle ne" data-corner="ne"></div>
-            <div class="crop-handle sw" data-corner="sw"></div>
-            <div class="crop-handle se" data-corner="se"></div>
-          </div>
-          <canvas id="result" width="1000" height="1000" class="is-hidden"></canvas>
-          <div id="placeholder-content" class="placeholder-content">
-            <button id="placeholder-upload" class="upload-button" type="button">Subir imagen</button>
-          </div>
-        </div>
-      </article>
-    </main>
+
     <aside>
       <fieldset>
         <label>
           Producto
           <select id="product"></select>
         </label>
+
+        <article class="preview-panel">
+          <h2 id="preview-heading">Imagen original</h2>
+          <div class="preview-media">
+            <button id="back-button" class="back-button is-hidden" aria-label="Volver a seleccionar imagen">
+              ←
+            </button>
+            <img
+              id="preview-image"
+              alt="Vista previa de la imagen seleccionada"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='24'%3ESin imagen%3C/text%3E%3C/svg%3E"
+            />
+            <div id="crop-overlay" class="crop-overlay">
+              <div class="crop-circle"></div>
+              <div class="crop-handle nw" data-corner="nw"></div>
+              <div class="crop-handle ne" data-corner="ne"></div>
+              <div class="crop-handle sw" data-corner="sw"></div>
+              <div class="crop-handle se" data-corner="se"></div>
+            </div>
+            <canvas id="result" width="1000" height="1000" class="is-hidden"></canvas>
+            <div id="placeholder-content" class="placeholder-content">
+              <button id="placeholder-upload" class="upload-button" type="button">Subir imagen</button>
+            </div>
+          </div>
+        </article>
+
         <label id="pegs-label" class="product-dependent">
           Clavos
           <input id="pegs" type="range" min="80" max="400" step="10" value="300" />
@@ -369,26 +370,10 @@
           <input id="thickness" type="range" min="0.01" max="0.1" step="0.001" value="0.02" />
           <span id="thickness-value">0.25</span>
         </label>
-        <label>
-          Zoom
-          <input id="zoom" type="range" min="1" max="8" step="0.1" value="1" />
-          <span id="zoom-value">1</span>
-        </label>
-        <label>
-          Desplazamiento X
-          <input id="zoom-offset-x" type="range" min="-1" max="1" step="0.01" value="0" />
-          <span id="zoom-offset-x-value">0</span>
-        </label>
-        <label>
-          Desplazamiento Y
-          <input id="zoom-offset-y" type="range" min="-1" max="1" step="0.01" value="0" />
-          <span id="zoom-offset-y-value">0</span>
-        </label>
       </fieldset>
 
       <div class="actions">
         <button id="generate" disabled>Generar</button>
-        <button id="download" type="button" disabled>Descargar instrucciones</button>
       </div>
 
       <div class="status">
@@ -421,11 +406,7 @@
         pegs: document.getElementById("pegs"),
         lines: document.getElementById("lines"),
         thickness: document.getElementById("thickness"),
-        zoom: document.getElementById("zoom"),
-        zoomOffsetX: document.getElementById("zoom-offset-x"),
-        zoomOffsetY: document.getElementById("zoom-offset-y"),
         generate: document.getElementById("generate"),
-        download: document.getElementById("download"),
         copyInstructions: document.getElementById("copy-instructions"),
         previewImage: document.getElementById("preview-image"),
         placeholderContent: document.getElementById("placeholder-content"),
@@ -440,16 +421,13 @@
         pegsValue: document.getElementById("pegs-value"),
         linesValue: document.getElementById("lines-value"),
         thicknessValue: document.getElementById("thickness-value"),
-        zoomValue: document.getElementById("zoom-value"),
-        zoomOffsetXValue: document.getElementById("zoom-offset-x-value"),
-        zoomOffsetYValue: document.getElementById("zoom-offset-y-value"),
         pegsLabel: document.getElementById("pegs-label"),
         thicknessLabel: document.getElementById("thickness-label"),
       };
 
       // Disable actions until an image is selected
       elements.generate.disabled = true;
-      elements.download.disabled = true;
+      /* download removed */
       elements.copyInstructions.disabled = true;
 
       async function loadProducts() {
@@ -577,9 +555,8 @@
           showOriginalView();
           elements.placeholderContent.classList.add("is-hidden");
           elements.backButton.classList.remove("is-hidden");
-          // Enable generate, keep download disabled until we have a result
+          // Enable generate
           elements.generate.disabled = false;
-          elements.download.disabled = true;
           // Initialize crop overlay
           initializeCropSelection();
           updateCropOverlay();
@@ -622,7 +599,7 @@
         elements.backButton.classList.add("is-hidden");
         // Disable actions again
         elements.generate.disabled = true;
-        elements.download.disabled = true;
+        /* download removed */
         elements.copyInstructions.disabled = true;
         elements.copyInstructions.disabled = true;
         // Clear instructions
@@ -644,9 +621,6 @@
       bindRange(elements.pegs, elements.pegsValue);
       bindRange(elements.lines, elements.linesValue);
       bindRange(elements.thickness, elements.thicknessValue);
-      bindRange(elements.zoom, elements.zoomValue);
-      bindRange(elements.zoomOffsetX, elements.zoomOffsetXValue);
-      bindRange(elements.zoomOffsetY, elements.zoomOffsetYValue);
 
       function updateStatus() {
         if (!currentThreading) {
@@ -743,8 +717,7 @@
           zoomOffsetY: offsetY,
         });
 
-        // Enable download now that we have a result context
-        elements.download.disabled = false;
+        /* download removed */
         // Reset instructions while generating
         const ta = document.getElementById("instructions");
         if (ta) {
@@ -756,22 +729,7 @@
         drawLoop();
       });
 
-      elements.download.addEventListener("click", () => {
-        if (!currentThreading) {
-          alert("Genera un arte de hilos primero.");
-          return;
-        }
-
-        const blob = new Blob([currentThreading.instructions], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "instrucciones-arte-hilos.txt";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      });
+      /* download removed */
 
       elements.copyInstructions.addEventListener("click", async () => {
         const ta = document.getElementById("instructions");
