@@ -1,0 +1,7 @@
+[
+  { "name": "Zil.45", "pegs": 220, "thickness": 0.02, "lines": 2200 },
+  { "name": "Zil.55", "pegs": 240, "thickness": 0.02, "lines": 2800 },
+  { "name": "Zil.O75", "pegs": 240, "thickness": 0.017, "lines": 3000 },
+  { "name": "Zil.90", "pegs": 240, "thickness": 0.017, "lines": 3200 }
+]
+

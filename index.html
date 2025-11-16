@@ -294,12 +294,7 @@
 
     <script src="./threadingSingle.js"></script>
     <script type="text/javascript">
-      const PRODUCTS = [
-        { name: "Pequeño (15cm)", pegs: 150, thickness: 0.02, lines: 1500 },
-        { name: "Mediano (20cm)", pegs: 200, thickness: 0.02, lines: 2000 },
-        { name: "Grande (25cm)", pegs: 250, thickness: 0.025, lines: 2500 },
-        { name: "Extra Grande (30cm)", pegs: 300, thickness: 0.03, lines: 3000 },
-      ];
+      let PRODUCTS = [];
 
       const elements = {
         product: document.getElementById("product"),
@@ -334,13 +329,36 @@
       elements.generate.disabled = true;
       elements.download.disabled = true;
 
-      // Populate product dropdown
-      PRODUCTS.forEach((product, index) => {
-        const option = document.createElement("option");
-        option.value = index;
-        option.textContent = product.name;
-        elements.product.appendChild(option);
-      });
+      async function loadProducts() {
+        try {
+          const response = await fetch("./products.json", { cache: "no-store" });
+          if (!response.ok) throw new Error("No se pudieron cargar los productos");
+          PRODUCTS = await response.json();
+
+          // Populate dropdown
+          elements.product.innerHTML = "";
+          PRODUCTS.forEach((product, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            option.textContent = product.name;
+            elements.product.appendChild(option);
+          });
+
+          // Select first product and apply values
+          if (PRODUCTS.length > 0) {
+            elements.product.value = "0";
+            const first = PRODUCTS[0];
+            elements.pegs.value = first.pegs;
+            elements.pegsValue.textContent = first.pegs;
+            elements.thickness.value = first.thickness;
+            elements.thicknessValue.textContent = first.thickness;
+            elements.lines.value = first.lines;
+            elements.linesValue.textContent = first.lines;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
 
       // Handle product selection (force product values; keep pegs/thickness hidden)
       elements.product.addEventListener("change", (event) => {
@@ -359,17 +377,8 @@
         elements.linesValue.textContent = selectedProduct.lines;
       });
 
-      // Initialize: preselect first product and apply values; keep pegs/thickness hidden
-      if (PRODUCTS.length > 0) {
-        elements.product.value = "0";
-        const first = PRODUCTS[0];
-        elements.pegs.value = first.pegs;
-        elements.pegsValue.textContent = first.pegs;
-        elements.thickness.value = first.thickness;
-        elements.thicknessValue.textContent = first.thickness;
-        elements.lines.value = first.lines;
-        elements.linesValue.textContent = first.lines;
-      }
+      // Initialize products from external JSON
+      loadProducts();
 
       const ctx = elements.canvas.getContext("2d");
       let currentImage = null;
