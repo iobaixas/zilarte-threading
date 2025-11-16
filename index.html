@@ -4,36 +4,76 @@
     <meta charset="utf-8" />
     <title>Zilarte</title>
     <style>
+      :root {
+        color-scheme: light;
+      }
+
       body {
         margin: 0;
         font-family: system-ui, sans-serif;
-        display: grid;
-        grid-template-columns: 320px 1fr;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
         min-height: 100vh;
-        color: #222;
-      }
-
-      aside {
-        padding: 1.5rem;
-        border-right: 1px solid #ddd;
+        background: #f3f4f6;
+        color: #111;
+        padding: 1.5rem 1rem 2rem;
         box-sizing: border-box;
-        background: #fafafa;
       }
 
       main {
-        display: grid;
-        place-items: center;
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .preview-panel {
         background: #fff;
-        position: relative;
+        border-radius: 16px;
+        padding: 1rem;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .preview-panel h2 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #111;
+      }
+
+      canvas,
+      .preview-panel img {
+        width: 100%;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
       }
 
       canvas {
-        width: 90%;
-        height: auto;
-        max-width: 90%;
+        aspect-ratio: 1 / 1;
+      }
+
+      .preview-panel img {
+        object-fit: cover;
+        min-height: 200px;
+      }
+
+      .is-hidden {
+        display: none !important;
+      }
+
+      aside {
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.5rem;
+        box-sizing: border-box;
         background: #fff;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-        border-radius: 12px;
+        border-radius: 18px;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
       }
 
       fieldset {
@@ -92,7 +132,18 @@
       }
     </style>
   </head>
-  <body>
+    <body>
+    <main>
+      <article class="preview-panel">
+        <h2 id="preview-heading">Imagen original</h2>
+        <img
+          id="preview-image"
+          alt="Vista previa de la imagen seleccionada"
+          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='24'%3ESin imagen%3C/text%3E%3C/svg%3E"
+        />
+        <canvas id="result" width="1000" height="1000" class="is-hidden"></canvas>
+      </article>
+    </main>
     <aside>
       <fieldset>
         <label>
@@ -111,12 +162,12 @@
         </label>
         <label>
           Opacidad
-          <input id="opacity" type="range" min="0.01" max="1.0" step="0.01" value="0.08" />
-          <span id="opacity-value">0.08</span>
+          <input id="opacity" type="range" min="0.01" max="1.0" step="0.01" value="1.0" />
+          <span id="opacity-value">1.0</span>
         </label>
         <label>
           Grosor
-          <input id="thickness" type="range" min="0.01" max="3" step="0.01" value="0.25" />
+          <input id="thickness" type="range" min="0.01" max="0.1" step="0.001" value="0.02" />
           <span id="thickness-value">0.25</span>
         </label>
         <label>
@@ -154,9 +205,6 @@
         <div><strong>Error promedio:</strong> <span id="status-error">-</span></div>
       </div>
     </aside>
-    <main>
-      <canvas id="result" width="1000" height="1000"></canvas>
-    </main>
 
     <script src="./threadingSingle.js"></script>
     <script type="text/javascript">
@@ -172,6 +220,8 @@
         shape: document.getElementById("shape"),
         generate: document.getElementById("generate"),
         download: document.getElementById("download"),
+        previewImage: document.getElementById("preview-image"),
+        previewHeading: document.getElementById("preview-heading"),
         canvas: document.getElementById("result"),
         statusPegs: document.getElementById("status-pegs"),
         statusSegments: document.getElementById("status-segments"),
@@ -189,6 +239,21 @@
       let currentImage = null;
       let currentThreading = null;
       let rafId = null;
+      let previewObjectUrl = null;
+
+      function showOriginalView() {
+        elements.previewHeading.textContent = "Imagen original";
+        elements.previewImage.classList.remove("is-hidden");
+        elements.canvas.classList.add("is-hidden");
+      }
+
+      function showResultView() {
+        elements.previewHeading.textContent = "Resultado con hilos";
+        elements.previewImage.classList.add("is-hidden");
+        elements.canvas.classList.remove("is-hidden");
+      }
+
+      showOriginalView();
 
       const plotter = {
         get size() {
@@ -221,13 +286,21 @@
       elements.file.addEventListener("change", async (event) => {
         const file = event.target.files[0];
         if (!file) return;
+
+        if (previewObjectUrl) {
+          URL.revokeObjectURL(previewObjectUrl);
+          previewObjectUrl = null;
+        }
+
         const url = URL.createObjectURL(file);
+        previewObjectUrl = url;
         const img = new Image();
         img.onload = () => {
-          URL.revokeObjectURL(url);
           currentImage = img;
+          elements.previewImage.src = url;
           ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
           ctx.drawImage(img, 0, 0, elements.canvas.width, elements.canvas.height);
+          showOriginalView();
         };
         img.src = url;
       });
@@ -292,6 +365,7 @@
 
         ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
 
+        showResultView();
         currentThreading = new ThreadingSingle(currentImage, {
           shape: elements.shape.value,
           pegsCount: parseInt(elements.pegs.value, 10),
