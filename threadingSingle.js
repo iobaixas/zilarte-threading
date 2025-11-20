@@ -14,7 +14,6 @@ class ThreadingSingle {
   static #advancedCompositingSupported = true;
 
   static DEFAULT_OPTIONS = {
-    shape: "circle",
     pegsCount: 250,
     quality: 5,
     mode: "monochrome",
@@ -416,57 +415,23 @@ class ThreadingSingle {
 
     const pegs = [];
 
-    if (this.parameters.shape === "rectangle") {
-      this.arePegsTooClose = (a, b) => a.x === b.x || a.y === b.y;
+    this.arePegsTooClose = (a, b) => {
+      const delta = Math.abs(a.angle - b.angle);
+      return Math.min(delta, ThreadingSingle.TWO_PI - delta) <= ThreadingSingle.MIN_SEGMENT_DISTANCE;
+    };
 
-      const width = targetSize.width;
-      const height = targetSize.height;
-      const ratioHeight = height / width;
-      const horizontalCount = Math.round(0.5 * this.parameters.pegsCount / (1 + ratioHeight));
-      const verticalCount = Math.round(0.5 * (this.parameters.pegsCount - 2 * horizontalCount));
+    const radius = 0.5 * Math.min(targetSize.width, targetSize.height);
+    const centerX = 0.5 * targetSize.width;
+    const centerY = 0.5 * targetSize.height;
+    const angleStep = ThreadingSingle.TWO_PI / this.parameters.pegsCount;
 
-      pegs.push({ x: 0, y: 0 });
-
-      for (let i = 1; i < horizontalCount; i++) {
-        pegs.push({ x: width * (i / horizontalCount), y: 0 });
-      }
-
-      pegs.push({ x: width, y: 0 });
-
-      for (let i = 1; i < verticalCount; i++) {
-        pegs.push({ x: width, y: height * (i / verticalCount) });
-      }
-
-      pegs.push({ x: width, y: height });
-
-      for (let i = horizontalCount - 1; i >= 1; i--) {
-        pegs.push({ x: width * (i / horizontalCount), y: height });
-      }
-
-      pegs.push({ x: 0, y: height });
-
-      for (let i = verticalCount - 1; i >= 1; i--) {
-        pegs.push({ x: 0, y: height * (i / verticalCount) });
-      }
-    } else {
-      this.arePegsTooClose = (a, b) => {
-        const delta = Math.abs(a.angle - b.angle);
-        return Math.min(delta, ThreadingSingle.TWO_PI - delta) <= ThreadingSingle.MIN_SEGMENT_DISTANCE;
-      };
-
-      const radius = 0.5 * Math.min(targetSize.width, targetSize.height);
-      const centerX = 0.5 * targetSize.width;
-      const centerY = 0.5 * targetSize.height;
-      const angleStep = ThreadingSingle.TWO_PI / this.parameters.pegsCount;
-
-      for (let i = 0; i < this.parameters.pegsCount; i++) {
-        const angle = i * angleStep;
-        pegs.push({
-          x: centerX + radius * Math.cos(angle),
-          y: centerY + radius * Math.sin(angle),
-          angle,
-        });
-      }
+    for (let i = 0; i < this.parameters.pegsCount; i++) {
+      const angle = i * angleStep;
+      pegs.push({
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+        angle,
+      });
     }
 
     for (const peg of pegs) {
