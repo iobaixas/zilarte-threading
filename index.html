@@ -846,9 +846,10 @@
       function initializeCropSelection() {
         // Make the square as large as possible without overflowing the displayed image
         const box = getDisplayedImageBox();
-        const size = Math.min(1, box.height / box.width); // normalized to displayed width
+        const height = box.height / box.width;
+        const size = Math.min(1, height); // normalized to displayed width
         const x = 0.5 - size / 2;
-        const y = 0.5 - size / 2;
+        const y = height / 2 - size / 2;
         currentCropSelection = { x: Math.max(0, x), y: Math.max(0, y), size };
         const overlay = elements.cropOverlay;
         overlay.onpointerdown = (e) => startDrag(e, "move");
