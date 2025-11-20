@@ -16,15 +16,14 @@ class ThreadingSingle {
   static DEFAULT_OPTIONS = {
     shape: "circle",
     pegsCount: 250,
-    quality: 4,
+    quality: 5,
     mode: "monochrome",
     invertColors: false,
     nbLines: 1000,
     lineOpacity: 1.0,
     lineThickness: 1,
-    zoom: 1,
-    zoomOffsetX: 0,
-    zoomOffsetY: 0,
+    cropOrigin: { x: 0, y: 0 },
+    cropSize: null,
   };
 
   constructor(sourceImage, options = {}) {
@@ -196,49 +195,37 @@ class ThreadingSingle {
   }
 
   resetHiddenCanvas() {
-    const size = ThreadingSingle.computeBestSize(this.sourceImage, 100 * this.hiddenCanvasScale);
-    this.hiddenCanvas.width = size.width;
-    this.hiddenCanvas.height = size.height;
+    const size = 100 * this.hiddenCanvasScale;
 
     ThreadingSingle.resetCanvasCompositing(this.hiddenCanvasContext);
 
-    const zoom = Math.max(1, Number(this.parameters.zoom) || 1);
-    const offsetX = ThreadingSingle.clamp(Number(this.parameters.zoomOffsetX) || 0, -1, 1);
-    const offsetY = ThreadingSingle.clamp(Number(this.parameters.zoomOffsetY) || 0, -1, 1);
-
-    const cropWidth = Math.max(1, Math.round(this.sourceImage.width / zoom));
-    const cropHeight = Math.max(1, Math.round(this.sourceImage.height / zoom));
-
-    const centerOffsetX = 0.5 * (this.sourceImage.width - cropWidth);
-    const centerOffsetY = 0.5 * (this.sourceImage.height - cropHeight);
-
-    const maxOffsetX = centerOffsetX;
-    const maxOffsetY = centerOffsetY;
-
-    const sourceX = ThreadingSingle.clamp(
-      Math.round(centerOffsetX + offsetX * maxOffsetX),
-      0,
-      this.sourceImage.width - cropWidth
-    );
-    const sourceY = ThreadingSingle.clamp(
-      Math.round(centerOffsetY + offsetY * maxOffsetY),
-      0,
-      this.sourceImage.height - cropHeight
+    const origin = this.parameters.cropOrigin || { x: 0, y: 0 };
+    const requestedSize = Number(this.parameters.cropSize);
+    const maxSquare = Math.min(this.sourceImage.width, this.sourceImage.height);
+    const cropSize = ThreadingSingle.clamp(
+      Number.isFinite(requestedSize) && requestedSize > 0 ? Math.round(requestedSize) : maxSquare,
+      1,
+      maxSquare
     );
 
+    const sourceX = ThreadingSingle.clamp(Math.round(origin.x), 0, this.sourceImage.width - cropSize);
+    const sourceY = ThreadingSingle.clamp(Math.round(origin.y), 0, this.sourceImage.height - cropSize);
+
+    this.hiddenCanvas.width = size;
+    this.hiddenCanvas.height = size;
     this.hiddenCanvasContext.drawImage(
       this.sourceImage,
       sourceX,
       sourceY,
-      cropWidth,
-      cropHeight,
+      cropSize,
+      cropSize,
       0,
       0,
-      size.width,
-      size.height
+      size,
+      size
     );
 
-    const image = this.hiddenCanvasContext.getImageData(0, 0, size.width, size.height);
+    const image = this.hiddenCanvasContext.getImageData(0, 0, size, size);
     this.thread.adjustCanvasData(image.data, this.parameters.invertColors);
     this.hiddenCanvasContext.putImageData(image, 0, 0);
 
@@ -514,14 +501,6 @@ class ThreadingSingle {
 
     const index = Math.floor(Math.random() * array.length);
     return array[index];
-  }
-
-  static computeBestSize(image, target) {
-    const ratio = target / Math.max(image.width, image.height);
-    return {
-      width: Math.ceil(image.width * ratio),
-      height: Math.ceil(image.height * ratio),
-    };
   }
 
   static rawColorChannels(color) {

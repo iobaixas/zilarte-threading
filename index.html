@@ -642,6 +642,8 @@
         if (dirty) {
           ctx.fillStyle = currentThreading.parameters.invertColors ? "#000" : "#fff";
           ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+          // Uncomment to show debug view
+          // currentThreading.drawDebugView(ctx);
 
           if (currentThreading.parameters.displayPegs) {
             currentThreading.drawPegs(plotter);
@@ -678,43 +680,16 @@
 
         showResultView();
 
-        // Compute zoom and offsets from normalized crop selection
+        // Compute crop origin/size in source pixels from the overlay selection
         const crop = currentCropSelection; // {x,y,size} normalized within displayed image box
-        const box = getDisplayedImageBox();
-        const sw = crop.size; // normalized width relative to displayed image
-        const cx = crop.x + crop.size / 2;
-        const cy = crop.y + crop.size / 2;
-
-        // Map to source image
         const srcW = currentImage.naturalWidth;
-        const srcH = currentImage.naturalHeight;
-        const displayedW = box.width;
-        const displayedH = box.height;
-        const scale = Math.min(displayedW / srcW, displayedH / srcH);
-        const cropWidthSrc = Math.round((sw * displayedW) / scale);
-        const cropHeightSrc = cropWidthSrc; // square
-        const desiredSourceX = Math.round(cx * srcW - cropWidthSrc / 2);
-        const desiredSourceY = Math.round(cy * srcH - cropHeightSrc / 2);
-
-        const centerOffsetX = Math.round(0.5 * (srcW - cropWidthSrc));
-        const centerOffsetY = Math.round(0.5 * (srcH - cropHeightSrc));
-        const maxOffsetX = centerOffsetX;
-        const maxOffsetY = centerOffsetY;
-
-        const clampedSourceX = Math.max(0, Math.min(srcW - cropWidthSrc, desiredSourceX));
-        const clampedSourceY = Math.max(0, Math.min(srcH - cropHeightSrc, desiredSourceY));
-
-        const offsetX = maxOffsetX ? (clampedSourceX - centerOffsetX) / maxOffsetX : 0;
-        const offsetY = maxOffsetY ? (clampedSourceY - centerOffsetY) / maxOffsetY : 0;
-        const zoom = srcW / cropWidthSrc; // equals 1/sw if image fully visible; this is robust
 
         currentThreading = new ThreadingSingle(currentImage, {
           pegsCount: parseInt(elements.pegs.value, 10),
           nbLines: parseInt(elements.lines.value, 10),
           lineThickness: parseFloat(elements.thickness.value),
-          zoom,
-          zoomOffsetX: offsetX,
-          zoomOffsetY: offsetY,
+          cropOrigin: { x: Math.floor(crop.x * srcW), y: Math.floor(crop.y * srcW) },
+          cropSize: Math.floor(crop.size * srcW),
         });
 
         /* download removed */
@@ -751,7 +726,7 @@
       });
 
       // ---------- Crop overlay logic ----------
-      let currentCropSelection = { x: 0.25, y: 0.25, size: 0.5 }; // normalized within displayed image box
+      let currentCropSelection = { x: 0.0, y: 0.0, size: 1.0 }; // normalized within displayed image box
       let dragState = null; // {type: 'move'|'resize', corner?, startX, startY, startSel}
 
       function getDisplayedImageBox() {
@@ -775,7 +750,7 @@
       function updateCropOverlay() {
         const box = getDisplayedImageBox();
         const x = box.left + currentCropSelection.x * box.width;
-        const y = box.top + currentCropSelection.y * box.height;
+        const y = box.top + currentCropSelection.y * box.width;
         const sizePx = currentCropSelection.size * box.width;
 
         const el = elements.cropOverlay;
@@ -806,62 +781,56 @@
       function onDragMove(e) {
         if (!dragState) return;
         const box = getDisplayedImageBox();
+        const heightToWidthRatio = box.height / box.width;
         const dx = (e.clientX - dragState.startX) / box.width;
         const dy = (e.clientY - dragState.startY) / box.height;
         let { x, y, size } = dragState.startSel;
+        const maxSize = Math.min(1, heightToWidthRatio);
 
         if (dragState.type === "move") {
-          x = clamp(x + dx, 0, 1 - size);
-          y = clamp(y + dy, 0, 1 - size);
+          x = clamp(x + dx, 0, maxSize - size);
+          y = clamp(y + dy, 0, heightToWidthRatio - size);
         } else if (dragState.type === "resize") {
-          const x0 = dragState.startSel.x;
-          const y0 = dragState.startSel.y;
-          const s0 = dragState.startSel.size;
+          const x0 = x;
+          const y0 = y;
+          const s0 = size;
 
           if (dragState.corner === "nw") {
             // Anchor at bottom-right (x0+s0, y0+s0)
             const ax = x0 + s0;
             const ay = y0 + s0;
-            const newX = clamp(x0 + dx, 0, ax); // normalized
-            const newY = clamp(y0 + dy, 0, ay);
-            let s = Math.min(ax - newX, ay - newY);
-            s = clamp(s, 0.05, 1.0);
-            x = clamp(ax - s, 0, 1 - s);
-            y = clamp(ay - s, 0, 1 - s);
-            size = s;
+            const mx = clamp(x0 + dx, 0, ax); // normalized
+            const my = clamp(y0 + dy, 0, ay);
+            let s = Math.max(ax - mx, ay - my);
+            size = clamp(s, 0.05, Math.min(ax, ay));
+            x = ax - size;
+            y = ay - size;
           } else if (dragState.corner === "ne") {
             // Anchor at bottom-left (x0, y0+s0)
             const ax = x0;
             const ay = y0 + s0;
             const mx = clamp(x0 + s0 + dx, ax, 1);
             const my = clamp(y0 + dy, 0, ay);
-            let s = Math.min(mx - ax, ay - my);
-            s = clamp(s, 0.05, 1.0);
-            x = clamp(ax, 0, 1 - s);
-            y = clamp(ay - s, 0, 1 - s);
-            size = s;
+            const s = Math.max(mx - ax, ay - my);
+            size = clamp(s, 0.05, Math.min(1.0 - ax, ay));
+            y = ay - size;
           } else if (dragState.corner === "sw") {
             // Anchor at top-right (x0+s0, y0)
             const ax = x0 + s0;
             const ay = y0;
             const mx = clamp(x0 + dx, 0, ax);
-            const my = clamp(y0 + s0 + dy, ay, 1);
-            let s = Math.min(ax - mx, my - ay);
-            s = clamp(s, 0.05, 1.0);
-            x = clamp(ax - s, 0, 1 - s);
-            y = clamp(ay, 0, 1 - s);
-            size = s;
+            const my = clamp(y0 + s0 + dy, ay, heightToWidthRatio);
+            const s = Math.max(ax - mx, my - ay);
+            size = clamp(s, 0.05, Math.min(ax, heightToWidthRatio - ay));
+            x = ax - size;
           } else if (dragState.corner === "se") {
             // Anchor at top-left (x0, y0)
             const ax = x0;
             const ay = y0;
             const mx = clamp(x0 + s0 + dx, ax, 1);
-            const my = clamp(y0 + s0 + dy, ay, 1);
-            let s = Math.min(mx - ax, my - ay);
-            s = clamp(s, 0.05, 1.0);
-            x = clamp(ax, 0, 1 - s);
-            y = clamp(ay, 0, 1 - s);
-            size = s;
+            const my = clamp(y0 + s0 + dy, ay, heightToWidthRatio);
+            const s = Math.max(mx - ax, my - ay);
+            size = clamp(s, 0.05, Math.min(1.0 - ax, heightToWidthRatio - ay));
           }
         }
 
@@ -879,7 +848,7 @@
         const box = getDisplayedImageBox();
         const size = Math.min(1, box.height / box.width); // normalized to displayed width
         const x = 0.5 - size / 2;
-        const y = 0.5 - (size * (box.width / box.height)) / 2; // normalized to displayed height
+        const y = 0.5 - size / 2;
         currentCropSelection = { x: Math.max(0, x), y: Math.max(0, y), size };
         const overlay = elements.cropOverlay;
         overlay.onpointerdown = (e) => startDrag(e, "move");
