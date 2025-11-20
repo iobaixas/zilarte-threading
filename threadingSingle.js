@@ -15,7 +15,7 @@ class ThreadingSingle {
 
   static DEFAULT_OPTIONS = {
     pegsCount: 250,
-    quality: 5,
+    quality: 3,
     mode: "monochrome",
     invertColors: false,
     nbLines: 1000,
