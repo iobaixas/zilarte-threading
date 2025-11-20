@@ -144,7 +144,6 @@
         position: absolute;
         box-sizing: border-box;
         border: 2px solid #ffffff;
-        outline: 9999px solid rgba(0, 0, 0, 0.4); /* dim outside area */
         cursor: move;
         display: none; /* shown in original view only */
         touch-action: none;
@@ -152,10 +151,10 @@
 
       .crop-handle {
         position: absolute;
-        width: 14px;
-        height: 14px;
-        background: #ffffff;
-        border: 1px solid #111827;
+        width: 28px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid #ffffff;
         border-radius: 3px;
         z-index: 2;
         touch-action: none;
@@ -167,17 +166,15 @@
         inset: 0;
         border-radius: 50%;
         border: 2px solid #ffffff;
-        z-index: 1;
         /* Improve visibility on any background */
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
-        mix-blend-mode: difference;
         pointer-events: none; /* keep handles and drag functional */
+        outline: 9999px solid rgba(0, 0, 0, 0.8); /* dim outside area */
       }
 
-      .crop-handle.nw { top: -8px; left: -8px; cursor: nwse-resize; }
-      .crop-handle.ne { top: -8px; right: -8px; cursor: nesw-resize; }
-      .crop-handle.sw { bottom: -8px; left: -8px; cursor: nesw-resize; }
-      .crop-handle.se { bottom: -8px; right: -8px; cursor: nwse-resize; }
+      .crop-handle.nw { top: -12px; left: -12px; cursor: nwse-resize; }
+      .crop-handle.ne { top: -12px; right: -12px; cursor: nesw-resize; }
+      .crop-handle.sw { bottom: -12px; left: -12px; cursor: nesw-resize; }
+      .crop-handle.se { bottom: -12px; right: -12px; cursor: nwse-resize; }
 
       aside {
         width: 100%;
