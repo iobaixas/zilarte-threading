@@ -333,9 +333,6 @@
         <article class="preview-panel">
           <h2 id="preview-heading">Imagen original</h2>
           <div class="preview-media">
-            <button id="back-button" class="back-button is-hidden" aria-label="Volver a seleccionar imagen">
-              ←
-            </button>
             <img
               id="preview-image"
               alt="Vista previa de la imagen seleccionada"
@@ -349,6 +346,9 @@
               <div class="crop-handle se" data-corner="se"></div>
             </div>
             <canvas id="result" width="1000" height="1000" class="is-hidden"></canvas>
+            <button id="back-button" class="back-button is-hidden" aria-label="Volver a seleccionar imagen">
+              ←
+            </button>
             <div id="placeholder-content" class="placeholder-content">
               <button id="placeholder-upload" class="upload-button" type="button">Subir imagen</button>
             </div>
