@@ -492,7 +492,7 @@ class ThreadingSingle {
 
     if (ThreadingSingle.#advancedCompositingSupported) {
       const operationName =
-        operation === ThreadingSingle.ECompositingOperation.LIGHTEN ? "lighter" : "darken";
+        operation === ThreadingSingle.ECompositingOperation.LIGHTEN ? "lighter" : "darker";
 
       context.globalCompositeOperation = operationName;
 
