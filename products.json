@@ -4,6 +4,6 @@
   { "name": "Zil.55", "pegs": 240, "thickness": 0.02, "lines": 3200 },
   { "name": "Zil.O75", "pegs": 240, "thickness": 0.017, "lines": 3400 },
   { "name": "Zil.90", "pegs": 240, "thickness": 0.017, "lines": 3500 },
-  { "name": "Zil.90", "pegs": 240, "thickness": 0.017, "lines": 3500 }
+  { "name": "Zil.75PRO", "pegs": 300, "thickness": 0.017, "lines": 3800 }
 ]
 
