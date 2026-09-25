@@ -289,6 +289,12 @@
         color: #111;
       }
 
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
       .copy-button {
         border: none;
         background: #111827;
@@ -387,7 +393,10 @@
     <section class="instructions-panel">
       <div class="header">
         <h2>Camino del hilo para tu imagen</h2>
-        <button id="copy-instructions" class="copy-button" type="button" disabled>Copiar</button>
+        <div class="header-actions">
+          <button id="copy-instructions" class="copy-button" type="button" disabled>Copiar</button>
+          <button id="start-guide" class="copy-button" type="button" disabled>Empezar</button>
+        </div>
       </div>
       <textarea
         id="instructions"
@@ -409,6 +418,7 @@
         thickness: document.getElementById("thickness"),
         generate: document.getElementById("generate"),
         copyInstructions: document.getElementById("copy-instructions"),
+        startGuide: document.getElementById("start-guide"),
         previewImage: document.getElementById("preview-image"),
         placeholderContent: document.getElementById("placeholder-content"),
         placeholderUpload: document.getElementById("placeholder-upload"),
@@ -430,6 +440,7 @@
       elements.generate.disabled = true;
       /* download removed */
       elements.copyInstructions.disabled = true;
+      elements.startGuide.disabled = true;
 
       async function loadProducts() {
         try {
@@ -568,6 +579,8 @@
             ta.disabled = true;
           }
           instructionsFilled = false;
+          elements.copyInstructions.disabled = true;
+          elements.startGuide.disabled = true;
         };
         img.src = url;
       }
@@ -602,7 +615,7 @@
         elements.generate.disabled = true;
         /* download removed */
         elements.copyInstructions.disabled = true;
-        elements.copyInstructions.disabled = true;
+        elements.startGuide.disabled = true;
         // Clear instructions
         const ta = document.getElementById("instructions");
         if (ta) {
@@ -659,6 +672,7 @@
               ta.value = currentThreading.instructions;
               ta.disabled = false;
               elements.copyInstructions.disabled = false;
+              elements.startGuide.disabled = false;
             }
             instructionsFilled = true;
           }
@@ -701,6 +715,8 @@
           ta.disabled = true;
         }
         instructionsFilled = false;
+        elements.copyInstructions.disabled = true;
+        elements.startGuide.disabled = true;
         updateStatus();
         drawLoop();
       });
@@ -724,6 +740,20 @@
           ta.select();
           document.execCommand("copy");
         }
+      });
+
+      const GUIDE_URL = "file:///C:/Users/iobai/OneDrive/Desktop/Code/zilarte-guia/index.html";
+
+      elements.startGuide.addEventListener("click", () => {
+        const ta = document.getElementById("instructions");
+        if (!ta || !ta.value) return;
+        const numbers = ta.value
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .join(",");
+        if (!numbers) return;
+        window.open(`${GUIDE_URL}#${numbers}`, "_blank");
       });
 
       // ---------- Crop overlay logic ----------
